@@ -80,6 +80,7 @@ section{padding:76px 0}
 .peca strong{font-size:.95rem}
 .resta{font-weight:700;font-size:.82rem;padding:3px 10px;border-radius:999px;background:rgba(43,255,136,.14);color:var(--neon);display:inline-block;margin-top:2px}
 .resta.ultimas{background:rgba(255,176,32,.15);color:var(--alerta)}
+.preco{margin-left:8px;color:var(--texto);font-weight:700;font-size:.85rem}
 .resta.zero{background:rgba(255,92,92,.15);color:var(--erro)}
 .add{width:38px;height:38px;border-radius:10px;border:0;background:var(--neon);color:#00170a;font:700 1.3rem var(--corpo);cursor:pointer;transition:transform .15s}
 .add:hover{transform:scale(1.1)}
@@ -187,7 +188,8 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
 /* ===== CONFIGURAÇÃO ===== */
 const WHATSAPP="554599000293";
 const TELEFONE="(45) 9900-0293";
-const SHEET_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vRKRSaFkXpLv6q3SFptBmbHUTqpdIYo-hfjs8854dDMQfnX7m859tyBcX0bnx77m4heiPFT9N7tsRR0/pub?gid=178728495&single=true&output=csv";   /* cole aqui o link CSV da planilha; vazio = estoque de exemplo */
+const ESTOQUE_API="https://script.google.com/macros/s/AKfycbyrPN26Y9H5vak7LlzFMxf40PGMypy6i7LUybZz42kq7ZsgdKlI5Ejb4vJn1o05TVQ5/exec";   /* link do Apps Script da planilha "Estoque Becker - Peças iPhone" (termina em /exec) */
+const SHEET_CSV="";     /* alternativa antiga: link CSV publicado; vazio = não usa */
 const ENDERECO="Rua Bahia, 33, São Cristóvão, Cascavel - PR, 85813-005";
 const HORARIO="Chame no WhatsApp para confirmar o horário.";
 const INSTAGRAM="beckerassistencia";
@@ -218,6 +220,11 @@ function converter(L){const h=L[0].map(norm),f=n=>h.indexOf(n),ic=f("categoria")
  return L.slice(1).map((r,i)=>({id:i,cat:(ic>=0&&r[ic].trim())||"Outros",modelo:r[im].trim(),qtd:Math.max(0,parseInt(r[iq],10)||0)})).filter(p=>p.modelo)}
 
 async function carregar(){
+ if(ESTOQUE_API){try{const r=await fetch(ESTOQUE_API+(ESTOQUE_API.includes("?")?"&":"?")+"t="+Date.now());if(!r.ok)throw new Error(r.status);
+   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null})).filter(p=>p.modelo);
+   Object.keys(carrinho).forEach(id=>{const p=itens.find(x=>x.id==id);if(!p||!p.qtd)delete carrinho[id];else carrinho[id]=Math.min(carrinho[id],p.qtd)});
+   $("#atualizado").textContent="Estoque atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});desenhar()
+  }catch(e){console.error(e);if(!itens.length)$("#grade").replaceChildren(el("div","aviso","Não conseguimos carregar o estoque agora. Chame no WhatsApp que informamos a disponibilidade."))}return}
  if(!SHEET_CSV){itens=DEMO;$("#atualizado").textContent="Estoque de exemplo. Os números reais aparecem quando a planilha for ligada.";desenhar();return}
  try{const r=await fetch(SHEET_CSV+(SHEET_CSV.includes("?")?"&":"?")+"t="+Date.now());if(!r.ok)throw new Error(r.status);
   itens=converter(lerCSV(await r.text()));
@@ -226,10 +233,13 @@ async function carregar(){
  }catch(e){console.error(e);if(!itens.length)$("#grade").replaceChildren(el("div","aviso","Não conseguimos carregar o estoque agora. Chame no WhatsApp que informamos a disponibilidade."))}}
 
 const restam=p=>p.qtd-(carrinho[p.id]||0);
-const linhaDe=m=>(m.match(/iPhone\s+(\d+)/)||[])[1]?"iPhone "+m.match(/iPhone\s+(\d+)/)[1]:"Outros";
+const linhaDe=m=>{const x=m.match(/iPhone\s+(\d+|XR|XS|X)\b/i);if(!x)return"Outros";return/^\d+$/.test(x[1])?"iPhone "+x[1]:"iPhone X / XR / XS"};
+const ordem=m=>{const x=m.match(/iPhone\s+(\d+|XR|XS|X)\b/i);if(!x)return 999;let n=/^\d+$/.test(x[1])?+x[1]:{X:10,XR:10.2,XS:10.4}[x[1].toUpperCase()];n=n===10||n===10.2||n===10.4?9+(n-10):n;
+ const r=m.slice(x.index+x[0].length).toLowerCase();return n*10+(/pro max|max/.test(r)?3:/pro/.test(r)?2:/plus/.test(r)?1:0)};
+const reais=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 
 function desenhar(){
- const partes=["Todos",...new Set(itens.map(p=>p.cat))],series=["Todos",...new Set(itens.map(p=>linhaDe(p.modelo)))];
+ const partes=["Todos",...new Set(itens.map(p=>p.cat))],series=["Todos",...[...new Set(itens.map(p=>linhaDe(p.modelo)))].sort((a,b)=>ordem(a)-ordem(b))];
  const ab=$("#abas");ab.replaceChildren();
  partes.forEach(c=>{const b=el("button","aba",c);b.setAttribute("aria-pressed",c===peca);b.onclick=()=>{peca=c;desenhar()};ab.appendChild(b)});
  const sel=$("#serie");sel.replaceChildren();series.forEach(s=>{const o=el("option",null,s==="Todos"?"Todas as linhas":s);o.value=s;sel.appendChild(o)});sel.value=serie;
@@ -237,16 +247,15 @@ function desenhar(){
  itens.forEach(p=>{if((peca==="Todos"||p.cat===peca)&&(serie==="Todos"||linhaDe(p.modelo)===serie)&&norm(p.modelo).includes(q)){if(!grupos.has(p.modelo))grupos.set(p.modelo,[]);grupos.get(p.modelo).push(p)}});
  const g=$("#grade");g.replaceChildren();
  if(!grupos.size)g.appendChild(el("div","aviso","Nenhum modelo encontrado. Chame no WhatsApp que verificamos para você."));
- grupos.forEach((rows,modelo)=>{const card=el("article","prod");card.appendChild(el("h3",null,modelo));
+ [...grupos].sort((a,b)=>ordem(a[0])-ordem(b[0])).forEach(([modelo,rows])=>{const card=el("article","prod");card.appendChild(el("h3",null,modelo));
   rows.forEach(p=>{const r=restam(p),li=el("div","linha-peca"),info=el("div","peca");
    info.appendChild(el("strong",null,p.cat));
    const chip=el("span","resta"+(r===0?" zero":r<=2?" ultimas":""),r===0?(p.qtd===0?"Esgotado":"Tudo no pedido"):r===1?"Resta 1":"Restam "+r);
-   const w=el("small");w.appendChild(chip);info.appendChild(w);
+   const w=el("small");w.appendChild(chip);w.appendChild(el("span","preco",p.preco?reais(p.preco):"Valor: consulte"));info.appendChild(w);
    const b=el("button","add","+");b.disabled=r===0;b.setAttribute("aria-label","Adicionar "+p.cat+" "+modelo);b.onclick=()=>mudar(p.id,1);
    li.append(info,b);card.appendChild(li)});
   g.appendChild(card)});
  desenharCarrinho()}
-
 function mudar(id,d){const p=itens.find(x=>x.id===id);if(!p)return;const n=(carrinho[id]||0)+d;
  if(n<=0)delete carrinho[id];else if(n<=p.qtd)carrinho[id]=n;
  const c=$("#conta");c.classList.remove("bump");void c.offsetWidth;c.classList.add("bump");desenhar()}
@@ -260,7 +269,7 @@ function desenharCarrinho(){
   const row=el("div","item"),info=el("div");info.appendChild(el("strong",null,p.modelo+" · "+p.cat));info.appendChild(el("small",null,restam(p)+" ainda disponível(is)"));
   const q=el("div","qtd"),m=el("button",null,"−"),n=el("span",null,carrinho[id]),a=el("button",null,"+");
   m.setAttribute("aria-label","Diminuir");a.setAttribute("aria-label","Aumentar");m.onclick=()=>mudar(id,-1);a.onclick=()=>mudar(id,1);
-  q.append(m,n,a);row.append(info,q);box.appendChild(row);msg+=`- ${p.modelo} (${p.cat}) x${carrinho[id]}\n`});
+  q.append(m,n,a);row.append(info,q);box.appendChild(row);msg+=`- ${p.modelo} (${p.cat}) x${carrinho[id]}${p.preco?" - "+reais(p.preco)+" cada":""}\n`});
  msg+="\nPode confirmar a disponibilidade?";$("#enviar").href=zap(ids.length?msg:"Olá! Vim pelo site da Becker.")}
 
 const gw=$("#gw");$("#abrirCarrinho").onclick=()=>gw.classList.add("aberto");
