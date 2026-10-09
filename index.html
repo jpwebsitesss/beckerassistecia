@@ -221,7 +221,7 @@ function converter(L){const h=L[0].map(norm),f=n=>h.indexOf(n),ic=f("categoria")
 
 async function carregar(){
  if(ESTOQUE_API){try{const r=await fetch(ESTOQUE_API+(ESTOQUE_API.includes("?")?"&":"?")+"t="+Date.now());if(!r.ok)throw new Error(r.status);
-   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null})).filter(p=>p.modelo);
+   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,tipo:x.tipo||null})).filter(p=>p.modelo);
    Object.keys(carrinho).forEach(id=>{const p=itens.find(x=>x.id==id);if(!p||!p.qtd)delete carrinho[id];else carrinho[id]=Math.min(carrinho[id],p.qtd)});
    $("#atualizado").textContent="Estoque atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});desenhar()
   }catch(e){console.error(e);if(!itens.length)$("#grade").replaceChildren(el("div","aviso","Não conseguimos carregar o estoque agora. Chame no WhatsApp que informamos a disponibilidade."))}return}
@@ -238,6 +238,7 @@ const ordem=m=>{const x=m.match(/iPhone\s+(\d+|XR|XS|X)\b/i);if(!x)return 999;le
  const r=m.slice(x.index+x[0].length).toLowerCase();return n*10+(/pro max|max/.test(r)?3:/pro/.test(r)?2:/plus/.test(r)?1:0)};
 const BASE_RE=/^iPhone\s+(?:\d+|XR|XS|X)\b(?:\s+(?:Pro Max|Pro|Plus|Max)\b)?(?:\s*\/\s*(?:\d+|XR|XS|X)?\b(?:\s*(?:Pro Max|Pro|Plus|Max)\b)?)*/i;
 const aparelho=m=>{const x=m.match(BASE_RE);return x?{base:x[0].trim(),extra:m.slice(x[0].length).trim()}:{base:m,extra:""}};
+const nomePeca=p=>p.tipo?p.cat+" "+p.tipo:p.cat;
 const reais=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 
 function desenhar(){
@@ -251,10 +252,10 @@ function desenhar(){
  if(!grupos.size)g.appendChild(el("div","aviso","Nenhum modelo encontrado. Chame no WhatsApp que verificamos para você."));
  [...grupos].sort((a,b)=>ordem(a[0])-ordem(b[0])).forEach(([modelo,rows])=>{const card=el("article","prod");card.appendChild(el("h3",null,modelo));
   rows.forEach(p=>{const r=restam(p),li=el("div","linha-peca"),info=el("div","peca");
-   info.appendChild(el("strong",null,p.cat+(aparelho(p.modelo).extra?" · "+aparelho(p.modelo).extra:"")));
+   info.appendChild(el("strong",null,nomePeca(p)+(aparelho(p.modelo).extra?" · "+aparelho(p.modelo).extra:"")));
    const chip=el("span","resta"+(r===0?" zero":r<=2?" ultimas":""),r===0?(p.qtd===0?"Esgotado":"Tudo no pedido"):r===1?"Resta 1":"Restam "+r);
    const w=el("small");w.appendChild(chip);w.appendChild(el("span","preco",p.preco?reais(p.preco):"Valor: consulte"));info.appendChild(w);
-   const b=el("button","add","+");b.disabled=r===0;b.setAttribute("aria-label","Adicionar "+p.cat+" "+modelo);b.onclick=()=>mudar(p.id,1);
+   const b=el("button","add","+");b.disabled=r===0;b.setAttribute("aria-label","Adicionar "+nomePeca(p)+" "+modelo);b.onclick=()=>mudar(p.id,1);
    li.append(info,b);card.appendChild(li)});
   g.appendChild(card)});
  desenharCarrinho()}
@@ -268,10 +269,10 @@ function desenharCarrinho(){
  if(!ids.length)box.appendChild(el("p",null,"Seu pedido está vazio. Adicione peças do estoque."));
  let msg="Olá! Quero pedir estas peças:\n";
  ids.forEach(id=>{const p=itens.find(x=>x.id===id);if(!p)return;
-  const row=el("div","item"),info=el("div");info.appendChild(el("strong",null,p.modelo+" · "+p.cat));info.appendChild(el("small",null,restam(p)+" ainda disponível(is)"));
+  const row=el("div","item"),info=el("div");info.appendChild(el("strong",null,p.modelo+" · "+nomePeca(p)));info.appendChild(el("small",null,restam(p)+" ainda disponível(is)"));
   const q=el("div","qtd"),m=el("button",null,"−"),n=el("span",null,carrinho[id]),a=el("button",null,"+");
   m.setAttribute("aria-label","Diminuir");a.setAttribute("aria-label","Aumentar");m.onclick=()=>mudar(id,-1);a.onclick=()=>mudar(id,1);
-  q.append(m,n,a);row.append(info,q);box.appendChild(row);msg+=`- ${p.modelo} (${p.cat}) x${carrinho[id]}${p.preco?" - "+reais(p.preco)+" cada":""}\n`});
+  q.append(m,n,a);row.append(info,q);box.appendChild(row);msg+=`- ${p.modelo} (${nomePeca(p)}) x${carrinho[id]}${p.preco?" - "+reais(p.preco)+" cada":""}\n`});
  msg+="\nPode confirmar a disponibilidade?";$("#enviar").href=zap(ids.length?msg:"Olá! Vim pelo site da Becker.")}
 
 const gw=$("#gw");$("#abrirCarrinho").onclick=()=>gw.classList.add("aberto");
