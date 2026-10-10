@@ -113,7 +113,7 @@ section{padding:76px 0}
 .aba[aria-pressed="true"]{background:var(--neon);color:#00170a;border-color:var(--neon)}
 .busca,.serie{padding:10px 14px;border:1.5px solid var(--linha);border-radius:10px;font:inherit;background:var(--card);color:var(--texto)}
 .busca{flex:1;min-width:190px}
-.grade-prod{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;align-items:start}
+.grade-prod{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));column-gap:14px;row-gap:0;grid-auto-rows:2px;align-items:start}
 .prod{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:18px;transition:transform .25s,border-color .25s,box-shadow .25s}
 .prod:hover{transform:translateY(-4px);border-color:var(--neon2);box-shadow:0 10px 34px rgba(43,255,136,.13)}
 .prod h3{font-size:1.15rem;margin:0}
@@ -129,11 +129,11 @@ section{padding:76px 0}
 .pecas-in{overflow:hidden}
 .pecas-in>.linha-peca:first-child{margin-top:14px}
 .linha-peca{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--linha)}
-.peca small{display:block;color:var(--suave);font-size:.8rem}
+.peca small{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:6px;color:var(--suave);font-size:.8rem}
 .peca strong{font-size:.95rem}
-.resta{font-weight:700;font-size:.82rem;padding:3px 10px;border-radius:999px;background:rgba(43,255,136,.14);color:var(--neon);display:inline-block;margin-top:2px}
+.resta{font-weight:700;font-size:.82rem;padding:3px 10px;border-radius:999px;background:rgba(43,255,136,.14);color:var(--neon);display:inline-block;white-space:nowrap}
 .resta.ultimas{background:rgba(255,176,32,.15);color:var(--alerta)}
-.preco{margin-left:8px;color:var(--texto);font-weight:700;font-size:.85rem}
+.preco{color:var(--texto);font-weight:700;font-size:.85rem;white-space:nowrap}
 .resta.zero{background:rgba(255,92,92,.15);color:var(--erro)}
 .add{width:38px;height:38px;border-radius:10px;border:0;background:var(--neon);color:#00170a;font:700 1.3rem var(--corpo);cursor:pointer;transition:transform .15s}
 .add:hover{transform:scale(1.1)}
@@ -317,6 +317,10 @@ const voar=o=>{if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
  d.animate([{transform:`translate(${x0}px,${y0}px) scale(1)`},{transform:`translate(${x0+dx*.5}px,${y0+dy*.5-90}px) scale(1.25)`,offset:.5},{transform:`translate(${x0+dx}px,${y0+dy}px) scale(.4)`,opacity:.5}],{duration:650,easing:"cubic-bezier(.45,0,.55,1)"}).onfinish=()=>d.remove()};
 const reais=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 
+/* Encaixe dos cards (estilo mural): cada card ocupa só a altura que precisa, sem buracos */
+let encaixe=null;
+function medir(c){c.style.gridRowEnd="span "+Math.ceil((c.offsetHeight+14)/2)}
+function observar(c){if(!window.ResizeObserver)return;encaixe=encaixe||new ResizeObserver(es=>es.forEach(e=>medir(e.target)));encaixe.observe(c)}
 function desenhar(){
  const partes=["Todos",...new Set([...itens.map(p=>p.cat),...Object.keys(SEM_ESTOQUE)])],series=["Todos",...[...new Set(itens.map(p=>linhaDe(p.modelo)))].sort((a,b)=>ordem(a)-ordem(b))];
  const ab=$("#abas");ab.replaceChildren();
@@ -324,7 +328,7 @@ function desenhar(){
  const sel=$("#serie");sel.replaceChildren();series.forEach(s=>{const o=el("option",null,s==="Todos"?"Todas as linhas":s);o.value=s;sel.appendChild(o)});sel.value=serie;
  const q=norm($("#busca").value),grupos=new Map();
  itens.forEach(p=>{if((peca==="Todos"||p.cat===peca)&&(serie==="Todos"||linhaDe(p.modelo)===serie)&&norm(p.modelo).includes(q)){const k=aparelho(p.modelo).base;if(!grupos.has(k))grupos.set(k,[]);grupos.get(k).push(p)}});
- const g=$("#grade");g.replaceChildren();g.classList.remove("anim");if(animar){void g.offsetWidth;g.classList.add("anim");animar=false}let idx=0;
+ const g=$("#grade");if(encaixe)encaixe.disconnect();g.replaceChildren();g.classList.remove("anim");if(animar){void g.offsetWidth;g.classList.add("anim");animar=false}let idx=0;
  if(!grupos.size)g.appendChild(el("div","aviso",SEM_ESTOQUE[peca]&&!itens.some(p=>p.cat===peca)?SEM_ESTOQUE[peca]:"Nenhum modelo encontrado. Chame no WhatsApp que verificamos para você."));
  [...grupos].sort((a,b)=>ordem(a[0])-ordem(b[0])).forEach(([modelo,rows])=>{const card=el("article","prod"+(abertos.has(modelo)?" aberto":""));card.style.setProperty("--i",Math.min(idx++,14));
   const topo=el("button","prod-topo"),box=el("div","pecas-in"),wrap=el("div","pecas");topo.append(el("h3",null,modelo),el("span","seta"));topo.setAttribute("aria-expanded",abertos.has(modelo));
@@ -337,6 +341,7 @@ function desenhar(){
    const b=el("button","add","+");b.disabled=r===0;b.setAttribute("aria-label","Adicionar "+nomePeca(p)+" "+modelo);b.onclick=()=>{voar(b);mudar(p.id,1)};
    li.append(info,b);box.appendChild(li)});
   g.appendChild(card)});
+ [...g.children].forEach(c=>{medir(c);observar(c)});
  desenharCarrinho()}
 function mudar(id,d){const p=itens.find(x=>x.id===id);if(!p)return;const n=(carrinho[id]||0)+d;
  if(n<=0)delete carrinho[id];else if(n<=p.qtd)carrinho[id]=n;
