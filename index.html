@@ -40,7 +40,12 @@ header{position:sticky;top:0;z-index:20;background:rgba(1,4,11,.85);backdrop-fil
 .hero{position:relative;overflow:hidden;padding:70px 0 90px;background:radial-gradient(ellipse at 75% 40%,rgba(43,255,136,.14),transparent 60%),var(--fundo)}
 .hero::before{content:"";position:absolute;inset:-50% 0 0;background:repeating-linear-gradient(90deg,rgba(43,255,136,.05) 0 1px,transparent 1px 70px),repeating-linear-gradient(0deg,rgba(43,255,136,.05) 0 1px,transparent 1px 70px);animation:grade 14s linear infinite;mask-image:linear-gradient(#000 20%,transparent 85%)}
 @keyframes grade{to{transform:translateY(70px)}}
-.hero-grade{display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:center;position:relative}
+.hero-grade{display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:center;position:relative;z-index:1}
+.hero::after{content:"";position:absolute;width:460px;height:460px;right:6%;top:4%;border-radius:50%;background:radial-gradient(circle,rgba(43,255,136,.22),transparent 65%);filter:blur(12px);pointer-events:none;z-index:0;animation:passeia 10s ease-in-out infinite alternate}
+@keyframes passeia{0%{transform:translate(0,0) scale(1)}50%{transform:translate(-60px,40px) scale(1.15)}100%{transform:translate(30px,-30px) scale(.95)}}
+.hero h1{position:relative}
+.hero h1::after{content:"";position:absolute;left:-4%;right:-4%;height:3px;top:0;border-radius:3px;background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 18px var(--neon);opacity:0;animation:scan 5s ease-in-out 1.2s infinite}
+@keyframes scan{0%{top:0;opacity:0}12%{opacity:.9}80%{opacity:.9}100%{top:100%;opacity:0}}
 .hero h1{font-size:clamp(2.3rem,6vw,4.2rem);font-weight:800;max-width:13ch}
 .hero h1 em{font-style:normal;color:var(--neon);text-shadow:0 0 28px rgba(43,255,136,.55)}
 .hero p{color:var(--suave);max-width:46ch;margin:18px 0 30px;font-size:1.1rem}
@@ -65,9 +70,18 @@ section{padding:76px 0}
 .serv p{color:var(--suave);font-size:.95rem}
 .serv .valor{display:block;margin-top:12px;font:800 1.45rem var(--titulo);color:var(--texto)}
 .garantia{display:flex;gap:22px;align-items:center;background:var(--card);border:1px solid var(--neon2);border-radius:18px;padding:24px;box-shadow:0 10px 36px rgba(43,255,136,.10)}
-.g-selo{flex:none;width:96px;height:96px;border-radius:50%;border:3px solid var(--neon);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 22px rgba(43,255,136,.35)}
+.g-selo{position:relative;flex:none;width:96px;height:96px;border-radius:50%;border:3px solid var(--neon);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 22px rgba(43,255,136,.35)}
 .g-selo b{font:800 2rem var(--titulo);color:var(--neon);line-height:1}
 .g-selo span{font-size:.85rem;color:var(--suave)}
+.g-selo::before{content:"";position:absolute;inset:-9px;border-radius:50%;background:conic-gradient(var(--neon),transparent 25%,transparent 75%,var(--neon));-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));animation:gira 3s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.grade-prod.anim .prod{animation:cardIn .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*45ms)}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.97)}}
+.zap-float{position:fixed;right:18px;bottom:18px;z-index:25;width:58px;height:58px;border-radius:50%;background:var(--neon);color:#00170a;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(43,255,136,.45);transition:transform .2s}
+.zap-float:hover{transform:scale(1.08)}
+.zap-float::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--neon);animation:pulsa 2.2s ease-out infinite}
+@keyframes pulsa{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.7);opacity:0}}
+.zap-float svg{width:28px;height:28px}
 .g-titulo{font-size:1.15rem;font-weight:700;margin-bottom:8px}
 .g-nao{color:var(--suave)}
 @media(max-width:560px){.garantia{flex-direction:column;text-align:center}}
@@ -195,6 +209,8 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
 </main>
 <footer><div class="wrap">Becker Assistência Técnica · Cascavel, PR</div></footer>
 
+<a class="zap-float zap" href="#" target="_blank" rel="noopener" aria-label="Falar no WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.6-5.2A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg></a>
+
 <div id="gw">
   <div class="fundo-g" id="fundoG"></div>
   <aside class="gaveta" aria-label="Seu pedido">
@@ -225,7 +241,7 @@ const DEMO=[];MODELOS.forEach((m,i)=>PARTES.forEach((p,j)=>{let q=(i*7+j*5)%8;if
 
 const $=s=>document.querySelector(s);
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
-let itens=[],carrinho={},peca="Todos",serie="Todos";
+let itens=[],carrinho={},peca="Todos",serie="Todos",animar=true;
 const zap=t=>`https://wa.me/${WHATSAPP}`+(t?`?text=${encodeURIComponent(t)}`:"");
 document.querySelectorAll(".zap").forEach(a=>a.href=zap("Olá! Vim pelo site da Becker."));
 $("#endereco").textContent=ENDERECO;$("#telefone").textContent=TELEFONE;$("#horario").textContent=HORARIO;
@@ -268,13 +284,13 @@ const reais=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 function desenhar(){
  const partes=["Todos",...new Set([...itens.map(p=>p.cat),...Object.keys(SEM_ESTOQUE)])],series=["Todos",...[...new Set(itens.map(p=>linhaDe(p.modelo)))].sort((a,b)=>ordem(a)-ordem(b))];
  const ab=$("#abas");ab.replaceChildren();
- partes.forEach(c=>{const b=el("button","aba",c);b.setAttribute("aria-pressed",c===peca);b.onclick=()=>{peca=c;desenhar()};ab.appendChild(b)});
+ partes.forEach(c=>{const b=el("button","aba",c);b.setAttribute("aria-pressed",c===peca);b.onclick=()=>{peca=c;animar=true;desenhar()};ab.appendChild(b)});
  const sel=$("#serie");sel.replaceChildren();series.forEach(s=>{const o=el("option",null,s==="Todos"?"Todas as linhas":s);o.value=s;sel.appendChild(o)});sel.value=serie;
  const q=norm($("#busca").value),grupos=new Map();
  itens.forEach(p=>{if((peca==="Todos"||p.cat===peca)&&(serie==="Todos"||linhaDe(p.modelo)===serie)&&norm(p.modelo).includes(q)){const k=aparelho(p.modelo).base;if(!grupos.has(k))grupos.set(k,[]);grupos.get(k).push(p)}});
- const g=$("#grade");g.replaceChildren();
+ const g=$("#grade");g.replaceChildren();g.classList.remove("anim");if(animar){void g.offsetWidth;g.classList.add("anim");animar=false}let idx=0;
  if(!grupos.size)g.appendChild(el("div","aviso",SEM_ESTOQUE[peca]&&!itens.some(p=>p.cat===peca)?SEM_ESTOQUE[peca]:"Nenhum modelo encontrado. Chame no WhatsApp que verificamos para você."));
- [...grupos].sort((a,b)=>ordem(a[0])-ordem(b[0])).forEach(([modelo,rows])=>{const card=el("article","prod");card.appendChild(el("h3",null,modelo));
+ [...grupos].sort((a,b)=>ordem(a[0])-ordem(b[0])).forEach(([modelo,rows])=>{const card=el("article","prod");card.style.setProperty("--i",Math.min(idx++,14));card.appendChild(el("h3",null,modelo));
   rows.forEach(p=>{const r=restam(p),li=el("div","linha-peca"),info=el("div","peca");
    info.appendChild(el("strong",null,nomePeca(p)+(aparelho(p.modelo).extra?" · "+aparelho(p.modelo).extra:"")));
    const chip=el("span","resta"+(r===0?" zero":r<=2?" ultimas":""),r===0?(p.qtd===0?"Esgotado":"Tudo no pedido"):r===1?"Resta 1":"Restam "+r);
@@ -302,7 +318,8 @@ function desenharCarrinho(){
 const gw=$("#gw");$("#abrirCarrinho").onclick=()=>gw.classList.add("aberto");
 $("#fechar").onclick=$("#fundoG").onclick=()=>gw.classList.remove("aberto");
 document.addEventListener("keydown",e=>{if(e.key==="Escape")gw.classList.remove("aberto")});
-$("#busca").addEventListener("input",desenhar);$("#serie").addEventListener("change",e=>{serie=e.target.value;desenhar()});
+$("#busca").addEventListener("input",()=>{animar=true;desenhar()});$("#serie").addEventListener("change",e=>{serie=e.target.value;animar=true;desenhar()});
+const selo=document.querySelector(".g-selo b");if(selo){const fim=+selo.textContent||90;const ioS=new IntersectionObserver(es=>{if(!es[0].isIntersecting)return;ioS.disconnect();if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;const t0=performance.now();const passo=t=>{const k=Math.min(1,(t-t0)/1400);selo.textContent=Math.round(fim*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(passo)};selo.textContent="0";requestAnimationFrame(passo)},{threshold:.6});ioS.observe(selo)}
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll(".rv").forEach(x=>io.observe(x));
 carregar();setInterval(carregar,RECARREGAR_SEG*1000);
