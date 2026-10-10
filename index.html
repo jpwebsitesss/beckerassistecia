@@ -236,7 +236,7 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
   <aside class="gaveta" aria-label="Seu pedido">
     <h2>Seu pedido <button id="fechar" aria-label="Fechar">&times;</button></h2>
     <div class="itens" id="itens"></div>
-    <div class="rodape"><p>O pedido só é confirmado depois que a loja responder no WhatsApp.</p>
+    <div class="rodape"><p>Ao enviar, as peças ficam reservadas por 24 horas. O pedido é confirmado pela loja no WhatsApp.</p>
     <a class="btn btn-neon" id="enviar" href="#" target="_blank" rel="noopener">Enviar pedido no WhatsApp</a></div>
   </aside>
 </div>
@@ -280,7 +280,7 @@ function converter(L){const h=L[0].map(norm),f=n=>h.indexOf(n),ic=f("categoria")
 
 async function carregar(){
  if(ESTOQUE_API){try{const r=await fetch(ESTOQUE_API+(ESTOQUE_API.includes("?")?"&":"?")+"t="+Date.now());if(!r.ok)throw new Error(r.status);
-   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,tipo:x.tipo||null})).filter(p=>p.modelo);
+   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,tipo:x.tipo||null,aba:x.aba||""})).filter(p=>p.modelo);
    Object.keys(carrinho).forEach(id=>{const p=itens.find(x=>x.id==id);if(!p||!p.qtd)delete carrinho[id];else carrinho[id]=Math.min(carrinho[id],p.qtd)});
    $("#atualizado").textContent="Estoque atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});desenhar()
   }catch(e){console.error(e);if(!itens.length)$("#grade").replaceChildren(el("div","aviso","Não conseguimos carregar o estoque agora. Chame no WhatsApp que informamos a disponibilidade."))}return}
@@ -333,7 +333,7 @@ function desenharCarrinho(){
  const ids=Object.keys(carrinho).map(Number);$("#conta").textContent=ids.reduce((s,i)=>s+carrinho[i],0);
  const box=$("#itens");box.replaceChildren();
  if(!ids.length)box.appendChild(el("p",null,"Seu pedido está vazio. Adicione peças do estoque."));
- let msg="Olá! Quero pedir estas peças para a minha loja:\n";
+ let msg="Olá! Quero pedir estas peças para a minha loja (pedido "+pedidoId+"):\n";
  ids.forEach(id=>{const p=itens.find(x=>x.id===id);if(!p)return;
   const row=el("div","item"),info=el("div");info.appendChild(el("strong",null,p.modelo+" · "+nomePeca(p)));info.appendChild(el("small",null,restam(p)>0?"Disponível":"Quantidade máxima no pedido"));
   const q=el("div","qtd"),m=el("button",null,"−"),n=el("span",null,carrinho[id]),a=el("button",null,"+");
@@ -341,6 +341,12 @@ function desenharCarrinho(){
   q.append(m,n,a);row.append(info,q);box.appendChild(row);msg+=`- ${p.modelo} (${nomePeca(p)}) x${carrinho[id]}${p.preco?" - "+reais(p.preco)+" cada":""}\n`});
  msg+="\nPode confirmar a disponibilidade?";$("#enviar").href=zap(ids.length?msg:"Olá! Vim pelo site da Becker.")}
 
+let pedidoId=novoPedido();
+function novoPedido(){return "B"+Date.now().toString(36).toUpperCase().slice(-6)}
+$("#enviar").addEventListener("click",()=>{const ids=Object.keys(carrinho).map(Number);if(!ids.length||!ESTOQUE_API)return;
+ const lista=ids.map(id=>{const p=itens.find(x=>x.id===id);return p&&{aba:p.aba,tipo:p.tipo||"",modelo:p.modelo,qtd:carrinho[id]}}).filter(Boolean);
+ try{fetch(ESTOQUE_API,{method:"POST",body:JSON.stringify({pedido:pedidoId,itens:lista}),keepalive:true}).catch(()=>{})}catch(e){}
+ setTimeout(()=>{carrinho={};pedidoId=novoPedido();gw.classList.remove("aberto");desenhar();setTimeout(carregar,4000)},300)});
 const gw=$("#gw");$("#abrirCarrinho").onclick=()=>gw.classList.add("aberto");
 $("#fechar").onclick=$("#fundoG").onclick=()=>gw.classList.remove("aberto");
 document.addEventListener("keydown",e=>{if(e.key==="Escape")gw.classList.remove("aberto")});
