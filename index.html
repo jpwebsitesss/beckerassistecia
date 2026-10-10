@@ -343,10 +343,13 @@ function desenharCarrinho(){
 
 let pedidoId=novoPedido();
 function novoPedido(){return "B"+Date.now().toString(36).toUpperCase().slice(-6)}
-$("#enviar").addEventListener("click",()=>{const ids=Object.keys(carrinho).map(Number);if(!ids.length||!ESTOQUE_API)return;
+$("#enviar").addEventListener("click",async e=>{const btn=$("#enviar"),ids=Object.keys(carrinho).map(Number);if(!ids.length||!ESTOQUE_API)return;
+ e.preventDefault();if(btn.dataset.enviando)return;btn.dataset.enviando="1";const link=btn.href,texto=btn.textContent;btn.textContent="Registrando pedido...";
+ let w=null;try{w=window.open("about:blank","_blank")}catch(err){}
  const lista=ids.map(id=>{const p=itens.find(x=>x.id===id);return p&&{aba:p.aba,tipo:p.tipo||"",modelo:p.modelo,qtd:carrinho[id]}}).filter(Boolean);
- try{fetch(ESTOQUE_API,{method:"POST",body:JSON.stringify({pedido:pedidoId,itens:lista}),keepalive:true}).catch(()=>{})}catch(e){}
- setTimeout(()=>{carrinho={};pedidoId=novoPedido();gw.classList.remove("aberto");desenhar();setTimeout(carregar,4000)},300)});
+ try{await Promise.race([fetch(ESTOQUE_API,{method:"POST",body:JSON.stringify({pedido:pedidoId,itens:lista})}),new Promise(r=>setTimeout(r,8000))])}catch(err){}
+ if(w&&!w.closed)w.location.href=link;else location.href=link;
+ btn.textContent=texto;delete btn.dataset.enviando;carrinho={};pedidoId=novoPedido();gw.classList.remove("aberto");desenhar();setTimeout(carregar,1500)});
 const gw=$("#gw");$("#abrirCarrinho").onclick=()=>gw.classList.add("aberto");
 $("#fechar").onclick=$("#fundoG").onclick=()=>gw.classList.remove("aberto");
 document.addEventListener("keydown",e=>{if(e.key==="Escape")gw.classList.remove("aberto")});
