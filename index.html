@@ -21,6 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script>try{if(!localStorage.getItem("becker_token"))document.documentElement.classList.add("trancado")}catch(e){document.documentElement.classList.add("trancado")}</script>
 <style>
 :root{--fundo:#01040b;--fundo2:#060d0f;--card:#0b1513;--linha:#16302a;--neon:#2bff88;--neon2:#0fd66b;--texto:#e6f1ed;--suave:#8fa59d;--alerta:#ffb020;--erro:#ff5c5c;
 --titulo:"Bricolage Grotesque","Trebuchet MS",sans-serif;--corpo:"DM Sans",system-ui,Arial,sans-serif}
@@ -186,15 +187,44 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
 .rodape .btn{width:100%}
 .rodape p{font-size:.88rem;color:var(--suave);margin-bottom:12px}
 @media(max-width:760px){.hero-grade,.local-grade{grid-template-columns:1fr}.hero-logo{max-width:250px;order:-1}.nav-links .hide-m{display:none}section{padding:56px 0}}
+.trancado body>*:not(#login){display:none!important}
+#login{display:none}
+.trancado #login{display:flex}
+#login{position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px 16px;background:radial-gradient(ellipse at 50% 30%,rgba(43,255,136,.12),transparent 60%),var(--fundo)}
+.login-caixa{width:min(380px,100%);background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:30px 26px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.login-caixa .marca{display:block;font-size:1.7rem;margin-bottom:6px}
+.login-caixa p{color:var(--suave);font-size:.95rem;margin-bottom:22px}
+.login-caixa label{display:block;font-weight:700;font-size:.9rem;margin:0 0 6px}
+.login-caixa input{width:100%;padding:12px 14px;border:1.5px solid var(--linha);border-radius:10px;background:var(--fundo2);color:var(--texto);font:inherit;margin-bottom:16px}
+.login-caixa input:focus{border-color:var(--neon2);outline:none}
+.login-caixa .btn{width:100%;margin-top:4px}
+.login-erro{color:var(--erro);font-size:.9rem;min-height:1.3em;margin-top:12px}
+.login-caixa small{display:block;color:var(--suave);font-size:.85rem;margin-top:14px;text-align:center}
+.sair{background:none;border:1.5px solid var(--linha);color:var(--suave);border-radius:10px;padding:8px 12px;font:500 .9rem var(--corpo);cursor:pointer}
+.sair:hover{color:var(--texto);border-color:var(--neon2)}
 @media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important;scroll-behavior:auto!important}.entra,.rv{opacity:1;transform:none}}
 </style>
 </head>
 <body>
+<div id="login" role="dialog" aria-labelledby="loginTitulo">
+  <form class="login-caixa" id="formLogin" autocomplete="on">
+    <span class="marca" id="loginTitulo">BECKER<span>.</span></span>
+    <p>Entre com seu usuário e senha para ver o estoque e os preços.</p>
+    <label for="usuario">Usuário</label>
+    <input id="usuario" name="username" autocomplete="username" autocapitalize="none" required>
+    <label for="senha">Senha</label>
+    <input id="senha" name="password" type="password" autocomplete="current-password" required>
+    <button class="btn btn-neon" type="submit" id="entrar">Entrar</button>
+    <div class="login-erro" id="loginErro" role="alert"></div>
+    <small>Não tem acesso? Chame no WhatsApp (45) 99900-0293.</small>
+  </form>
+</div>
 <header><div class="wrap nav">
   <a class="marca" href="#topo">BECKER<span>.</span></a>
   <nav class="nav-links" aria-label="Menu">
     <a class="hide-m" href="#garantia">Garantia</a><a class="hide-m" href="#estoque">Estoque</a><a class="hide-m" href="#servicos">Serviços</a><a class="hide-m" href="#local">Onde estamos</a>
     <button class="carrinho-btn" id="abrirCarrinho" aria-label="Abrir pedido">Pedido <b id="conta">0</b></button>
+    <button class="sair" id="sair">Sair</button>
   </nav>
 </div></header>
 
@@ -294,6 +324,9 @@ const PARTES=["Tela","Bateria","Tampa traseira"];
 const DEMO=[];MODELOS.forEach((m,i)=>PARTES.forEach((p,j)=>{let q=(i*7+j*5)%8;if(q===7)q=0;DEMO.push({id:DEMO.length,cat:p,modelo:"iPhone "+m,qtd:q})}));
 
 const $=s=>document.querySelector(s);
+const pegarToken=()=>{try{return localStorage.getItem("becker_token")||""}catch(e){return""}};
+const guardarToken=t=>{try{t?localStorage.setItem("becker_token",t):localStorage.removeItem("becker_token")}catch(e){}};
+function trancar(msg){guardarToken("");itens=[];document.documentElement.classList.add("trancado");$("#loginErro").textContent=msg||"";setTimeout(()=>$("#usuario").focus(),50)}
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
 let itens=[],carrinho={},peca="Todos",serie="Todos",animar=true;const abertos=new Set();
 const zap=t=>`https://wa.me/${WHATSAPP}`+(t?`?text=${encodeURIComponent(t)}`:"");
@@ -313,8 +346,9 @@ function converter(L){const h=L[0].map(norm),f=n=>h.indexOf(n),ic=f("categoria")
  return L.slice(1).map((r,i)=>({id:i,cat:(ic>=0&&r[ic].trim())||"Outros",modelo:r[im].trim(),qtd:Math.max(0,parseInt(r[iq],10)||0)})).filter(p=>p.modelo)}
 
 async function carregar(){
- if(ESTOQUE_API){try{const r=await fetch(ESTOQUE_API+(ESTOQUE_API.includes("?")?"&":"?")+"t="+Date.now());if(!r.ok)throw new Error(r.status);
-   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,instalada:x.instalada>0?Number(x.instalada):null,tipo:x.tipo||null,aba:x.aba||""})).filter(p=>p.modelo);
+ if(ESTOQUE_API){const tk=pegarToken();if(!tk){trancar();return}
+  try{const r=await fetch(ESTOQUE_API+(ESTOQUE_API.includes("?")?"&":"?")+"token="+encodeURIComponent(tk)+"&t="+Date.now());if(!r.ok)throw new Error(r.status);
+   const d=await r.json();if(d.erro==="login"){trancar("Seu acesso expirou. Entre de novo.");return}itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,instalada:x.instalada>0?Number(x.instalada):null,tipo:x.tipo||null,aba:x.aba||""})).filter(p=>p.modelo);
    Object.keys(carrinho).forEach(id=>{const p=itens.find(x=>x.id==id);if(!p||!p.qtd)delete carrinho[id];else carrinho[id]=Math.min(carrinho[id],p.qtd)});
    $("#atualizado").textContent="Estoque atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});desenhar()
   }catch(e){console.error(e);if(!itens.length)$("#grade").replaceChildren(el("div","aviso","Não conseguimos carregar o estoque agora. Chame no WhatsApp que informamos a disponibilidade."))}return}
@@ -381,7 +415,7 @@ $("#enviar").addEventListener("click",async e=>{const btn=$("#enviar"),ids=Objec
  e.preventDefault();if(btn.dataset.enviando)return;btn.dataset.enviando="1";const link=btn.href,texto=btn.textContent;btn.textContent="Registrando pedido...";
  let w=null;try{w=window.open("about:blank","_blank")}catch(err){}
  const lista=ids.map(id=>{const p=itens.find(x=>x.id===id);return p&&{aba:p.aba,tipo:p.tipo||"",modelo:p.modelo,qtd:carrinho[id]}}).filter(Boolean);
- try{await Promise.race([fetch(ESTOQUE_API,{method:"POST",body:JSON.stringify({pedido:pedidoId,itens:lista})}),new Promise(r=>setTimeout(r,8000))])}catch(err){}
+ try{await Promise.race([fetch(ESTOQUE_API,{method:"POST",body:JSON.stringify({token:pegarToken(),pedido:pedidoId,itens:lista})}),new Promise(r=>setTimeout(r,8000))])}catch(err){}
  if(w&&!w.closed)w.location.href=link;else location.href=link;
  btn.textContent=texto;delete btn.dataset.enviando;carrinho={};pedidoId=novoPedido();gw.classList.remove("aberto");desenhar();setTimeout(carregar,1500)});
 const gw=$("#gw");$("#abrirCarrinho").onclick=()=>gw.classList.add("aberto");
@@ -391,7 +425,15 @@ $("#busca").addEventListener("input",()=>desenhar());
 const selo=document.querySelector(".g-selo b");if(selo){const fim=+selo.textContent||90;const ioS=new IntersectionObserver(es=>{if(!es[0].isIntersecting)return;ioS.disconnect();if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;const t0=performance.now();const passo=t=>{const k=Math.min(1,(t-t0)/1400);selo.textContent=Math.round(fim*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(passo)};selo.textContent="0";requestAnimationFrame(passo)},{threshold:.6});ioS.observe(selo)}
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll(".rv").forEach(x=>io.observe(x));
-carregar();setInterval(carregar,RECARREGAR_SEG*1000);
+$("#formLogin").addEventListener("submit",async e=>{e.preventDefault();const b=$("#entrar"),erro=$("#loginErro");
+ b.disabled=true;b.textContent="Entrando...";erro.textContent="";
+ try{const r=await fetch(ESTOQUE_API,{method:"POST",body:JSON.stringify({acao:"login",usuario:$("#usuario").value,senha:$("#senha").value})});const d=await r.json();
+  if(d.ok&&d.token){guardarToken(d.token);$("#senha").value="";document.documentElement.classList.remove("trancado");carregar()}
+  else erro.textContent=d.erro||"Usuário ou senha incorretos."}
+ catch(err){erro.textContent="Não conseguimos conectar agora. Tente de novo em instantes."}
+ b.disabled=false;b.textContent="Entrar"});
+$("#sair").onclick=()=>{carrinho={};desenharCarrinho();trancar()};
+carregar();setInterval(()=>{if(pegarToken())carregar()},RECARREGAR_SEG*1000);
 </script>
 </body>
 </html>
