@@ -140,6 +140,29 @@ section{padding:76px 0}
 .add[disabled]{background:#1d2b28;color:#566a64;cursor:not-allowed;transform:none}
 .aviso{padding:28px;border:2px dashed var(--linha);border-radius:14px;color:var(--suave);text-align:center;grid-column:1/-1}
 .atualizado{font-size:.85rem;color:var(--suave);margin-top:18px}
+.lista-prod{background:var(--card);border:1px solid var(--linha);border-radius:16px;overflow:hidden}
+.lp-cab,.lp{display:grid;grid-template-columns:minmax(0,1fr) 110px 130px 52px;gap:12px;align-items:center;padding:12px 18px}
+.lp-cab{font:700 .85rem var(--corpo);color:var(--suave);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--linha);background:var(--fundo2)}
+.lp{border-bottom:1px solid var(--linha);transition:background .2s}
+.lp:last-child{border-bottom:0}
+.lp:nth-child(odd){background:rgba(43,255,136,.025)}
+.lp:hover{background:rgba(43,255,136,.06)}
+.lp .n,.lp-cab .n{text-align:right;font-variant-numeric:tabular-nums}
+.lp-nome strong{font-weight:700}
+.lp-tag{display:inline-block;margin-left:8px;font-size:.78rem;color:var(--alerta);border:1px solid rgba(255,176,32,.4);border-radius:999px;padding:1px 8px;vertical-align:middle}
+.lp-v{color:var(--texto)}
+.lp-i{color:var(--neon);font-weight:700}
+.lp.off{opacity:.45}
+.lp.off .lp-tag{color:var(--suave);border-color:var(--linha)}
+.lp .add{justify-self:end}
+.lista-prod .aviso{border:0;border-radius:0}
+@media(max-width:620px){
+ .lp-cab{display:none}
+ .lp{grid-template-columns:1fr 1fr 44px;grid-template-areas:"nome nome nome" "v i b";row-gap:6px;padding:12px 14px}
+ .lp-nome{grid-area:nome}.lp-v{grid-area:v}.lp-i{grid-area:i}.lp .add,.lp .vazio{grid-area:b}
+ .lp .n{text-align:left;font-size:.95rem}
+ .lp .n::before{content:attr(data-l);display:block;font-size:.72rem;color:var(--suave);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+}
 
 .local-grade{display:grid;grid-template-columns:1fr 1.3fr;gap:30px;align-items:start}
 dl{display:grid;gap:16px;margin-bottom:24px}
@@ -200,13 +223,11 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
 
 <section class="alt" id="estoque"><div class="wrap">
   <h2 class="sec-titulo rv">Estoque de peças</h2>
-  <p class="sec-sub rv">Escolha as peças, monte o pedido da sua loja e envie pelo WhatsApp. Cada peça mostra se está disponível no momento.</p>
+  <p class="sec-sub rv">Procure a peça, veja o valor da peça e o valor com a instalação, monte o pedido e envie pelo WhatsApp.</p>
   <div class="ferramentas">
-    <div class="abas" id="abas" role="group" aria-label="Filtrar por peça"></div>
-    <select class="serie" id="serie" aria-label="Filtrar por linha"></select>
-    <input class="busca" id="busca" type="search" placeholder="Buscar modelo, ex.: 14 Pro" aria-label="Buscar modelo">
+    <input class="busca" id="busca" type="search" placeholder="Pesquisar peça ou modelo, ex.: bateria 14 Pro" aria-label="Pesquisar peça ou modelo">
   </div>
-  <div class="grade-prod" id="grade" aria-live="polite"></div>
+  <div class="lista-prod" id="grade" aria-live="polite"></div>
   <p class="atualizado" id="atualizado"></p>
 </div></section>
 
@@ -293,7 +314,7 @@ function converter(L){const h=L[0].map(norm),f=n=>h.indexOf(n),ic=f("categoria")
 
 async function carregar(){
  if(ESTOQUE_API){try{const r=await fetch(ESTOQUE_API+(ESTOQUE_API.includes("?")?"&":"?")+"t="+Date.now());if(!r.ok)throw new Error(r.status);
-   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,tipo:x.tipo||null,aba:x.aba||""})).filter(p=>p.modelo);
+   const d=await r.json();itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,instalada:x.instalada>0?Number(x.instalada):null,tipo:x.tipo||null,aba:x.aba||""})).filter(p=>p.modelo);
    Object.keys(carrinho).forEach(id=>{const p=itens.find(x=>x.id==id);if(!p||!p.qtd)delete carrinho[id];else carrinho[id]=Math.min(carrinho[id],p.qtd)});
    $("#atualizado").textContent="Estoque atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});desenhar()
   }catch(e){console.error(e);if(!itens.length)$("#grade").replaceChildren(el("div","aviso","Não conseguimos carregar o estoque agora. Chame no WhatsApp que informamos a disponibilidade."))}return}
@@ -321,27 +342,22 @@ const reais=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 let encaixe=null;
 function medir(c){c.style.gridRowEnd="span "+Math.ceil((c.offsetHeight+14)/2)}
 function observar(c){if(!window.ResizeObserver)return;encaixe=encaixe||new ResizeObserver(es=>es.forEach(e=>medir(e.target)));encaixe.observe(c)}
+const nomeItem=p=>[p.cat,p.tipo,p.modelo].filter(Boolean).join(" ");
+const comparar=new Intl.Collator("pt-BR",{numeric:true,sensitivity:"base"}).compare;
 function desenhar(){
- const partes=["Todos",...new Set([...itens.map(p=>p.cat),...Object.keys(SEM_ESTOQUE)])],series=["Todos",...[...new Set(itens.map(p=>linhaDe(p.modelo)))].sort((a,b)=>ordem(a)-ordem(b))];
- const ab=$("#abas");ab.replaceChildren();
- partes.forEach(c=>{const b=el("button","aba",c);b.setAttribute("aria-pressed",c===peca);b.onclick=()=>{peca=c;animar=true;desenhar()};ab.appendChild(b)});
- const sel=$("#serie");sel.replaceChildren();series.forEach(s=>{const o=el("option",null,s==="Todos"?"Todas as linhas":s);o.value=s;sel.appendChild(o)});sel.value=serie;
- const q=norm($("#busca").value),grupos=new Map();
- itens.forEach(p=>{if((peca==="Todos"||p.cat===peca)&&(serie==="Todos"||linhaDe(p.modelo)===serie)&&norm(p.modelo).includes(q)){const k=aparelho(p.modelo).base;if(!grupos.has(k))grupos.set(k,[]);grupos.get(k).push(p)}});
- const g=$("#grade");if(encaixe)encaixe.disconnect();g.replaceChildren();g.classList.remove("anim");if(animar){void g.offsetWidth;g.classList.add("anim");animar=false}let idx=0;
- if(!grupos.size)g.appendChild(el("div","aviso",SEM_ESTOQUE[peca]&&!itens.some(p=>p.cat===peca)?SEM_ESTOQUE[peca]:"Nenhum modelo encontrado. Chame no WhatsApp que verificamos para você."));
- [...grupos].sort((a,b)=>ordem(a[0])-ordem(b[0])).forEach(([modelo,rows])=>{const card=el("article","prod"+(abertos.has(modelo)?" aberto":""));card.style.setProperty("--i",Math.min(idx++,14));
-  const topo=el("button","prod-topo"),box=el("div","pecas-in"),wrap=el("div","pecas");topo.append(el("h3",null,modelo),el("span","seta"));topo.setAttribute("aria-expanded",abertos.has(modelo));
-  topo.onclick=()=>{const ab=card.classList.toggle("aberto");topo.setAttribute("aria-expanded",ab);wrap.inert=!ab;ab?abertos.add(modelo):abertos.delete(modelo)};
-  wrap.inert=!abertos.has(modelo);wrap.appendChild(box);card.append(topo,wrap);
-  rows.forEach(p=>{const r=restam(p),li=el("div","linha-peca"),info=el("div","peca");
-   info.appendChild(el("strong",null,nomePeca(p)+(aparelho(p.modelo).extra?" · "+aparelho(p.modelo).extra:"")));
-   const chip=el("span","resta"+(r===0?" zero":""),r===0?(p.qtd===0?"Indisponível":"Já está no pedido"):"Disponível");
-   const w=el("small");w.appendChild(chip);w.appendChild(el("span","preco",p.preco?reais(p.preco):"Valor: consulte"));info.appendChild(w);
-   const b=el("button","add","+");b.disabled=r===0;b.setAttribute("aria-label","Adicionar "+nomePeca(p)+" "+modelo);b.onclick=()=>{voar(b);mudar(p.id,1)};
-   li.append(info,b);box.appendChild(li)});
-  g.appendChild(card)});
- [...g.children].forEach(c=>{medir(c);observar(c)});
+ const termos=norm($("#busca").value).split(/\s+/).filter(Boolean);
+ const lista=itens.filter(p=>{const n=norm(nomeItem(p));return termos.every(t=>n.includes(t))}).sort((a,b)=>comparar(nomeItem(a),nomeItem(b)));
+ const g=$("#grade");g.replaceChildren();
+ if(!lista.length){g.appendChild(el("div","aviso",itens.length?"Nenhuma peça encontrada. Chame no WhatsApp que verificamos para você.":"Carregando estoque..."));desenharCarrinho();return}
+ const cab=el("div","lp-cab");cab.append(el("span",null,"Produto"),el("span","n","R$"),el("span","n","R$ Instalada"),el("span"));g.appendChild(cab);
+ lista.forEach(p=>{const r=restam(p),li=el("div","lp"+(p.qtd===0?" off":"")),nome=el("div","lp-nome");
+  nome.appendChild(el("strong",null,nomeItem(p)));
+  if(p.qtd===0)nome.appendChild(el("small","lp-tag","Indisponível"));else if(r===0)nome.appendChild(el("small","lp-tag","Já está no pedido"));
+  const v=el("span","n lp-v",p.preco?reais(p.preco):"Consultar"),ins=el("span","n lp-i",p.instalada?reais(p.instalada):"Consultar");
+  v.dataset.l="R$";ins.dataset.l="R$ Instalada";li.append(nome,v,ins);
+  if(p.qtd>0){const b=el("button","add","+");b.disabled=r===0;b.setAttribute("aria-label","Adicionar "+nomeItem(p));b.onclick=()=>{voar(b);mudar(p.id,1)};li.appendChild(b)}
+  else li.appendChild(el("span","vazio"));
+  g.appendChild(li)});
  desenharCarrinho()}
 function mudar(id,d){const p=itens.find(x=>x.id===id);if(!p)return;const n=(carrinho[id]||0)+d;
  if(n<=0)delete carrinho[id];else if(n<=p.qtd)carrinho[id]=n;
@@ -371,7 +387,7 @@ $("#enviar").addEventListener("click",async e=>{const btn=$("#enviar"),ids=Objec
 const gw=$("#gw");$("#abrirCarrinho").onclick=()=>gw.classList.add("aberto");
 $("#fechar").onclick=$("#fundoG").onclick=()=>gw.classList.remove("aberto");
 document.addEventListener("keydown",e=>{if(e.key==="Escape")gw.classList.remove("aberto")});
-$("#busca").addEventListener("input",()=>{animar=true;desenhar()});$("#serie").addEventListener("change",e=>{serie=e.target.value;animar=true;desenhar()});
+$("#busca").addEventListener("input",()=>desenhar());
 const selo=document.querySelector(".g-selo b");if(selo){const fim=+selo.textContent||90;const ioS=new IntersectionObserver(es=>{if(!es[0].isIntersecting)return;ioS.disconnect();if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;const t0=performance.now();const passo=t=>{const k=Math.min(1,(t-t0)/1400);selo.textContent=Math.round(fim*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(passo)};selo.textContent="0";requestAnimationFrame(passo)},{threshold:.6});ioS.observe(selo)}
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll(".rv").forEach(x=>io.observe(x));
