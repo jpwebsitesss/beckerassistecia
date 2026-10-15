@@ -342,7 +342,7 @@ const reais=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 let encaixe=null;
 function medir(c){c.style.gridRowEnd="span "+Math.ceil((c.offsetHeight+14)/2)}
 function observar(c){if(!window.ResizeObserver)return;encaixe=encaixe||new ResizeObserver(es=>es.forEach(e=>medir(e.target)));encaixe.observe(c)}
-const nomeItem=p=>[p.cat,p.tipo,p.modelo].filter(Boolean).join(" ");
+const nomeItem=p=>[/^iphone/i.test(p.modelo)?p.cat.replace(/\s*iphone$/i,""):p.cat,p.tipo,p.modelo].filter(Boolean).join(" ");
 const comparar=new Intl.Collator("pt-BR",{numeric:true,sensitivity:"base"}).compare;
 function desenhar(){
  const termos=norm($("#busca").value).split(/\s+/).filter(Boolean);
