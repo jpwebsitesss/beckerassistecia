@@ -196,7 +196,11 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
 .trancado #login{display:flex}
 #login{position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px 16px;background:radial-gradient(ellipse at 50% 30%,rgba(43,255,136,.12),transparent 60%),var(--fundo)}
 .login-caixa{width:min(380px,100%);background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:30px 26px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.login-caixa .marca{display:block;font-size:1.7rem;margin-bottom:6px}
+.login-grade{width:min(920px,100%);display:grid;grid-template-columns:1fr minmax(0,380px);gap:56px;align-items:center}
+.login-lado{display:flex;justify-content:center}
+.login-logo{width:100%;max-width:400px;display:block;animation:flutuar 5s ease-in-out infinite;filter:drop-shadow(0 0 40px rgba(43,255,136,.3))}
+.login-titulo{font:800 1.8rem var(--titulo);margin-bottom:6px}
+@media(max-width:760px){.login-grade{grid-template-columns:1fr;gap:18px;justify-items:center}.login-logo{max-width:210px}#login{align-items:flex-start;overflow:auto}}
 .login-caixa p{color:var(--suave);font-size:.95rem;margin-bottom:22px}
 .login-caixa label{display:block;font-weight:700;font-size:.9rem;margin:0 0 6px}
 .login-caixa input{width:100%;padding:12px 14px;border:1.5px solid var(--linha);border-radius:10px;background:var(--fundo2);color:var(--texto);font:inherit;margin-bottom:16px}
@@ -211,8 +215,10 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
 </head>
 <body>
 <div id="login" role="dialog" aria-labelledby="loginTitulo">
+ <div class="login-grade">
+  <div class="login-lado"><img class="login-logo" id="loginLogo" alt="Becker Assistência Técnica"></div>
   <form class="login-caixa" id="formLogin" autocomplete="on">
-    <span class="marca" id="loginTitulo">BECKER<span>.</span></span>
+    <h1 class="login-titulo" id="loginTitulo">Entrar</h1>
     <p>Entre com seu usuário e senha para ver o estoque e os preços.</p>
     <label for="usuario">Usuário</label>
     <input id="usuario" name="username" autocomplete="username" autocapitalize="none" required>
@@ -222,6 +228,7 @@ footer{border-top:1px solid var(--linha);color:var(--suave);padding:24px 0;font-
     <div class="login-erro" id="loginErro" role="alert"></div>
     <small>Não tem acesso? Chame no WhatsApp (45) 99900-0293.</small>
   </form>
+ </div>
 </div>
 <header><div class="wrap nav">
   <a class="marca" href="#topo">BECKER<span>.</span></a>
@@ -329,6 +336,7 @@ const PARTES=["Tela","Bateria","Tampa traseira"];
 const DEMO=[];MODELOS.forEach((m,i)=>PARTES.forEach((p,j)=>{let q=(i*7+j*5)%8;if(q===7)q=0;DEMO.push({id:DEMO.length,cat:p,modelo:"iPhone "+m,qtd:q})}));
 
 const $=s=>document.querySelector(s);
+(()=>{const h=document.querySelector(".hero-logo"),l=document.getElementById("loginLogo");if(h&&l)l.src=h.src})();
 const pegarToken=()=>{try{return localStorage.getItem("becker_token")||""}catch(e){return""}};
 const guardarToken=t=>{try{t?localStorage.setItem("becker_token",t):localStorage.removeItem("becker_token")}catch(e){}};
 function trancar(msg){guardarToken("");itens=[];document.documentElement.classList.add("trancado");$("#loginErro").textContent=msg||"";setTimeout(()=>$("#usuario").focus(),50)}
