@@ -153,6 +153,8 @@ section{padding:76px 0}
 .lp-tag{display:inline-block;margin-left:8px;font-size:.78rem;color:var(--alerta);border:1px solid rgba(255,176,32,.4);border-radius:999px;padding:1px 8px;vertical-align:middle}
 .lp-v{color:var(--texto)}
 .lp-i{color:var(--neon);font-weight:700}
+.lp-f{color:var(--suave)}
+.com-final .lp-cab,.com-final .lp{grid-template-columns:minmax(0,1fr) 110px 130px 120px 52px}
 .lp.off{opacity:.45}
 .lp.off .lp-tag{color:var(--suave);border-color:var(--linha)}
 .lp .add{justify-self:end}
@@ -160,7 +162,8 @@ section{padding:76px 0}
 @media(max-width:620px){
  .lp-cab{display:none}
  .lp{grid-template-columns:1fr 1fr 44px;grid-template-areas:"nome nome nome" "v i b";row-gap:6px;padding:12px 14px}
- .lp-nome{grid-area:nome}.lp-v{grid-area:v}.lp-i{grid-area:i}.lp .add,.lp .vazio{grid-area:b}
+ .lp-nome{grid-area:nome}.lp-v{grid-area:v}.lp-i{grid-area:i}.lp-f{grid-area:f}.lp .add,.lp .vazio{grid-area:b}
+ .com-final .lp{grid-template-columns:1fr 1fr 1fr 44px;grid-template-areas:"nome nome nome nome" "v i f b"}
  .lp .n{text-align:left;font-size:.95rem}
  .lp .n::before{content:attr(data-l);display:block;font-size:.72rem;color:var(--suave);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
 }
@@ -363,7 +366,7 @@ function converter(L){const h=L[0].map(norm),f=n=>h.indexOf(n),ic=f("categoria")
 async function carregar(){
  if(ESTOQUE_API){const tk=pegarToken();if(!tk){trancar();return}
   try{const r=await fetch(ESTOQUE_API+(ESTOQUE_API.includes("?")?"&":"?")+"token="+encodeURIComponent(tk)+"&t="+Date.now());if(!r.ok)throw new Error(r.status);
-   const d=await r.json();if(d.erro==="login"){trancar("Seu acesso expirou. Entre de novo.");return}itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,instalada:x.instalada>0?Number(x.instalada):null,tipo:x.tipo||null,aba:x.aba||""})).filter(p=>p.modelo);
+   const d=await r.json();if(d.erro==="login"){trancar("Seu acesso expirou. Entre de novo.");return}itens=(d.itens||[]).map((x,i)=>({id:i,cat:x.categoria||"Outros",modelo:String(x.modelo||"").trim(),qtd:Math.max(0,parseInt(x.quantidade,10)||0),preco:x.preco>0?Number(x.preco):null,instalada:x.instalada>0?Number(x.instalada):null,final:x.final>0?Number(x.final):null,tipo:x.tipo||null,aba:x.aba||""})).filter(p=>p.modelo);
    Object.keys(carrinho).forEach(id=>{const p=itens.find(x=>x.id==id);if(!p||!p.qtd)delete carrinho[id];else carrinho[id]=Math.min(carrinho[id],p.qtd)});
    $("#atualizado").textContent="Estoque atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});desenhar()
   }catch(e){console.error(e);if(!itens.length)$("#grade").replaceChildren(el("div","aviso","Não conseguimos carregar o estoque agora. Chame no WhatsApp que informamos a disponibilidade."))}return}
@@ -400,12 +403,14 @@ function desenhar(){
  const lista=itens.filter(p=>{const n=norm(nomeItem(p));return termos.every(t=>n.includes(t))}).sort((a,b)=>comparar(nomeItem(a),nomeItem(b)));
  const g=$("#grade");g.replaceChildren();
  if(!lista.length){g.appendChild(el("div","aviso",itens.length?"Nenhuma peça encontrada. Chame no WhatsApp que verificamos para você.":"Carregando estoque..."));desenharCarrinho();return}
- const cab=el("div","lp-cab");cab.append(el("span",null,"Produto"),el("span","n","R$"),el("span","n","R$ Instalada"),el("span"));g.appendChild(cab);
+ const comFinal=itens.some(p=>p.final);g.classList.toggle("com-final",comFinal);
+ const cab=el("div","lp-cab");cab.append(el("span",null,"Produto"),el("span","n","R$"),el("span","n","R$ Instalada"));if(comFinal)cab.append(el("span","n","Cliente final"));cab.append(el("span"));g.appendChild(cab);
  lista.forEach(p=>{const r=restam(p),li=el("div","lp"+(p.qtd===0?" off":"")),nome=el("div","lp-nome");
   nome.appendChild(el("strong",null,nomeItem(p)));
   if(p.qtd===0)nome.appendChild(el("small","lp-tag","Indisponível"));else if(r===0)nome.appendChild(el("small","lp-tag","Já está no pedido"));
   const v=el("span","n lp-v",p.preco?reais(p.preco):"Consultar"),ins=el("span","n lp-i",p.instalada?reais(p.instalada):"Consultar");
   v.dataset.l="R$";ins.dataset.l="R$ Instalada";li.append(nome,v,ins);
+  if(comFinal){const f=el("span","n lp-f",p.final?reais(p.final):"Consultar");f.dataset.l="Cliente final";li.appendChild(f)}
   if(p.qtd>0){const b=el("button","add","+");b.disabled=r===0;b.setAttribute("aria-label","Adicionar "+nomeItem(p));b.onclick=()=>{voar(b);mudar(p.id,1)};li.appendChild(b)}
   else li.appendChild(el("span","vazio"));
   g.appendChild(li)});
